@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: arkashine-soil-collection-centre
+    env: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.js

@@ -1,0 +1,17 @@
+{
+  "name": "arkashine-soil-collection-centre",
+  "version": "1.0.0",
+  "description": "Arkashine Soil Collection Centre Tracking Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "soil",
+    "tracking",
+    "dashboard",
+    "agriculture"
+  ],
+  "author": "",
+  "license": "ISC"
+}

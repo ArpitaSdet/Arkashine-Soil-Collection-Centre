@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 const MIME_TYPES = {
   '.html': 'text/html',
   '.css': 'text/css',
@@ -38,14 +38,15 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   const url = `http://localhost:${PORT}`;
-  const lanUrl = `http://192.168.29.3:${PORT}`;
   console.log(`=======================================================`);
-  console.log(` Arkashine Soil Collection Centre Tracking & Operations Dashboard`);
-  console.log(` Local Computer URL : ${url}`);
-  console.log(` Mobile Phone / Wi-Fi: ${lanUrl}`);
+  console.log(` Arkashine Soil Collection Centre Tracking Dashboard`);
+  console.log(` Server running on port: ${PORT}`);
+  console.log(` Local URL: ${url}`);
   console.log(`=======================================================`);
   
-  // Open in default browser
-  const startCmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
-  exec(`${startCmd} ${url}`);
+  // Auto-open browser only on local computer, never in production/Render cloud
+  if (!process.env.PORT && !process.env.RENDER) {
+    const startCmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+    exec(`${startCmd} ${url}`, () => {});
+  }
 });
