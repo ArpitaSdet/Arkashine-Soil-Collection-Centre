@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arkashine Soil Collection Centre | Soil Diagnostic Consignment Operations</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              950: '#022c22',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Barcode & QR Code Generators -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col text-slate-800">
+
+  <!-- Top Simplified Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 no-print shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center text-2xl shadow-sm">
+          🌱
+        </div>
+        <div>
+          <h1 class="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+            ARKASHINE SOIL COLLECTION CENTRE
+            <span class="text-[10px] uppercase font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">Operations Console</span>
+          </h1>
+          <p class="text-[11px] text-slate-500 font-medium">End-to-End Soil Consignment Logistics, Lab Diagnostics & Farmer Advisory System</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions Bar -->
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button 
+          onclick="app.startNewFarmerFlow()"
+          class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1"
+          title="Start fresh farmer registration"
+        >
+          <span>➕</span> Register Farmer
+        </button>
+        <button 
+          onclick="app.openRegisterPartnerModal()" 
+          class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg transition flex items-center gap-1 border border-emerald-200"
+          title="Register 40 villages soil collection partner shop"
+        >
+          <span>🏬</span> Partner
+        </button>
+        <button 
+          onclick="app.openRegisterCentreModal()" 
+          class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold rounded-lg transition flex items-center gap-1 border border-blue-200"
+          title="Register diagnostic testing centre or remote machine"
+        >
+          <span>🧪</span> Centre / Machine
+        </button>
+        <button 
+          onclick="document.getElementById('region-analytics-box')?.scrollIntoView({ behavior: 'smooth' })" 
+          class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold rounded-lg transition flex items-center gap-1 border border-purple-200"
+          title="Jump to region-wise testing breakdown"
+        >
+          <span>📊</span> Regions
+        </button>
+        <button 
+          onclick="app.exportDataJSON()" 
+          class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+          title="Backup all data to JSON"
+        >
+          ⬇️ Export
+        </button>
+        <button 
+          onclick="app.resetToDemo()" 
+          class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition"
+          title="Reset to default demo data"
+        >
+          🔄 Reset
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main 1-Page Layout Container -->
+  <main class="max-w-6xl mx-auto px-4 py-6 w-full space-y-6 flex-1">
+    
+    <!-- Live Dashboard Metric Counter Strip -->
+    <div id="quick-stats-strip" class="no-print"></div>
+
+    <!-- MAIN 1-PAGE FARMER FLOW (Registration + Immediate 14 Parameters Testing + Barcode + Advisory + Health Card) -->
+    <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6 no-print" id="workflow-container">
+      <!-- Injected dynamically via app.js -->
+    </section>
+
+    <!-- COLLECTION BAGS BATCH TRACKER (POST OFFICE BAG & SAMPLE HIERARCHY) -->
+    <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4 no-print" id="bags-tracker-container">
+      <!-- Injected dynamically via app.js -->
+    </section>
+
+    <!-- REGISTERED FARMERS LIST: Click to view full information, edit farmer details -->
+    <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4 no-print" id="farmers-directory-container">
+      <!-- Injected dynamically via app.js -->
+    </section>
+
+    <!-- LIVE SOIL SAMPLES DIRECTORY: Easily track journey, runner, test status & update -->
+    <section class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden no-print" id="directory-container">
+      <!-- Injected dynamically via app.js -->
+    </section>
+
+    <!-- REGION-WISE TESTING BREAKDOWN & TESTING CENTRES -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 no-print">
+      <!-- Live testing centres & machine status -->
+      <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4" id="active-centres-box">
+        <!-- Injected via app.js -->
+      </section>
+
+      <!-- In which region how many tests done -->
+      <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4" id="region-analytics-box">
+        <!-- Injected via app.js -->
+      </section>
+    </div>
+
+    <!-- 40 VILLAGES COLLECTION PARTNERS DIRECTORY -->
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4 no-print" id="partners-reference-box">
+      <!-- Injected via app.js -->
+    </div>
+
+    <!-- PRINTABLE SOIL HEALTH CARD (Rendered on page, prints cleanly) -->
+    <div id="printable-card-container"></div>
+
+  </main>
+
+
+  <!-- Global Modal for quick popups -->
+  <div id="global-modal"></div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-auto no-print text-center text-xs text-slate-400">
+    Arkashine Soil Collection Centre Tracking System &copy; 2026. Simple 1-Page Workflow. Data automatically saved locally.
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
