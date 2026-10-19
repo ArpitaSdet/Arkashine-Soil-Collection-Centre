@@ -37,11 +37,7 @@ const INITIAL_DATA = {
 
 class ArkashineApp {
   constructor() {
-    // Auto-clear prior demo data from browser storage
-    try {
-      ["ARKASHINE_DASHBOARD_DATA_V1", "ARKASHINE_DASHBOARD_DATA_V2", "ARKASHINE_DASHBOARD_DATA_V3", "ARKASHINE_DASHBOARD_DATA_V4", "ARKASHINE_DASHBOARD_DATA_V4_1"].forEach(k => localStorage.removeItem(k));
-    } catch(e) {}
-    this.storageKey = "ARKASHINE_DASHBOARD_DATA_CLEAN_V1";
+    this.storageKey = "ARKASHINE_DASHBOARD_DATA_SHARED_V1";
     this.data = this.loadData();
     this.activeStep = 1; // 1: Register/Batch, 2: Pickup, 3: Testing, 4: Certificate, 5: Advisory
     this.activeTicket = null;
@@ -51,8 +47,60 @@ class ArkashineApp {
     this.samplesPerBagCapacityOption = 10;
     this.expandedFarmerId = null;
     this.editingFarmerId = null;
-    this.activeScannedCode = "ARK-IND-89201"; // Default displayed report
-    this.isCameraActive = false;
+
+    // Initial server sync & automatic 8-second background polling
+    this.syncWithServer(false);
+    setInterval(() => this.syncWithServer(true), 8000);
+  }
+
+  isUserTyping() {
+    const el = document.activeElement;
+    return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+  }
+
+  async syncWithServer(isBackground = false) {
+    try {
+      const res = await fetch('/api/data', { cache: 'no-cache' });
+      if (res.ok) {
+        const serverData = await res.json();
+        const serverStr = JSON.stringify(serverData);
+        const currentStr = JSON.stringify(this.data);
+
+        this.updateSyncBadge('online');
+
+        if (serverStr !== currentStr) {
+          // Prevent background re-render while user is actively typing in a form
+          if (isBackground && this.isUserTyping()) {
+            return;
+          }
+          this.data = serverData;
+          try { localStorage.setItem(this.storageKey, serverStr); } catch(e) {}
+          this.render();
+        }
+      } else {
+        this.updateSyncBadge('offline');
+      }
+    } catch (e) {
+      this.updateSyncBadge('offline');
+    }
+  }
+
+  updateSyncBadge(status) {
+    const badge = document.getElementById("cloud-sync-badge");
+    if (!badge) return;
+    if (status === 'online') {
+      badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center gap-1";
+      badge.innerHTML = "🟢 Cloud Synced";
+      badge.title = "Connected to central server. All devices see real-time updates.";
+    } else if (status === 'syncing') {
+      badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-300 flex items-center gap-1 animate-pulse";
+      badge.innerHTML = "🟡 Syncing...";
+      badge.title = "Saving data to central database...";
+    } else {
+      badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300 flex items-center gap-1";
+      badge.innerHTML = "⚪ Local Storage";
+      badge.title = "Operating locally. Sync will reconnect automatically.";
+    }
   }
 
   loadData() {
@@ -61,12 +109,8 @@ class ArkashineApp {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (!parsed.villages) parsed.villages = [...PRESET_VILLAGES];
-        if (parsed.soilSamples) {
-          parsed.soilSamples.forEach(s => {
-            if (s.advisorySent === undefined) s.advisorySent = false;
-            if (!s.advisorySentTo) s.advisorySentTo = "";
-          });
-        }
+        if (!parsed.farmers) parsed.farmers = [];
+        if (!parsed.soilSamples) parsed.soilSamples = [];
         return parsed;
       }
     } catch (e) {
@@ -81,10 +125,28 @@ class ArkashineApp {
     } catch (e) {
       console.error("Could not save to localStorage:", e);
     }
+
+    // Broadcast update to central server API for all connected users
+    this.updateSyncBadge('syncing');
+    fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(this.data)
+    })
+    .then(r => {
+      if (r.ok) {
+        this.updateSyncBadge('online');
+      } else {
+        this.updateSyncBadge('offline');
+      }
+    })
+    .catch(() => {
+      this.updateSyncBadge('offline');
+    });
   }
 
   clearAllData() {
-    if (confirm("Are you sure you want to delete ALL data? All registered farmers and soil samples will be permanently cleared.")) {
+    if (confirm("Are you sure you want to delete ALL data? All registered farmers and soil samples will be permanently cleared across all devices.")) {
       this.data.farmers = [];
       this.data.soilSamples = [];
       this.data.testingCentres.forEach(tc => tc.totalTestsCount = 0);
@@ -93,7 +155,7 @@ class ArkashineApp {
       this.activeStep = 1;
       this.saveData();
       this.render();
-      alert("✅ All data has been completely wiped from the backend storage!");
+      alert("✅ All data has been completely wiped from the shared central backend!");
     }
   }
 
@@ -168,6 +230,7 @@ class ArkashineApp {
     this.saveData();
     this.render();
   }
+
 
   // ─── STEP 1 SUBMIT (Register or Edit Farmer & Assign to Bag) ───────────
   handleStep1Submit() {
