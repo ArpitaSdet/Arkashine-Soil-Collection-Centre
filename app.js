@@ -513,6 +513,37 @@ class ArkashineApp {
     this.renderFarmersDirectory();
   }
 
+  deleteFarmer(farmerId) {
+    const farmer = this.data.farmers.find(f => f.id === farmerId);
+    if (!farmer) return;
+
+    const farmerSamples = this.data.soilSamples.filter(s => s.farmerId === farmerId || s.farmerPhone === farmer.phone);
+    let msg = "Are you sure you want to delete farmer " + farmer.name + "?";
+    if (farmerSamples.length > 0) {
+      msg += "\nThis will also remove their " + farmerSamples.length + " soil sample(s) from the central ledger.";
+    }
+
+    if (confirm(msg)) {
+      this.data.farmers = this.data.farmers.filter(f => f.id !== farmerId);
+      this.data.soilSamples = this.data.soilSamples.filter(s => s.farmerId !== farmerId && s.farmerPhone !== farmer.phone);
+
+      if (this.activeTicket && (this.activeTicket.farmerId === farmerId || this.activeTicket.farmerPhone === farmer.phone)) {
+        this.activeTicket = null;
+        this.activeStep = 1;
+      }
+      if (this.expandedFarmerId === farmerId) {
+        this.expandedFarmerId = null;
+      }
+      if (this.editingFarmerId === farmerId) {
+        this.editingFarmerId = null;
+      }
+
+      this.saveData();
+      this.render();
+      alert("✅ Farmer " + farmer.name + " and records removed successfully across all devices!");
+    }
+  }
+
   openEditCapacityModal() {
     const bags = prompt("Edit Total Number of Bags in Collection Batch:", this.totalBagsBatchOption);
     if (bags && !isNaN(parseInt(bags, 10))) {
@@ -1583,6 +1614,13 @@ class ArkashineApp {
                   >
                     ✏️ Edit Name
                   </button>
+                  <button 
+                    onclick="event.stopPropagation(); app.deleteFarmer('${f.id}')"
+                    class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 rounded-lg text-[10px] font-bold transition border border-rose-200"
+                    title="Delete farmer and their samples"
+                  >
+                    🗑️ Delete
+                  </button>
                   <span class="text-slate-400 text-xs font-bold">
                     ${isExpanded ? '▲' : '▼'}
                   </span>
@@ -1651,6 +1689,9 @@ class ArkashineApp {
                                 </button>
                                 <button onclick="app.shareOnWhatsApp('${s.trackingId}')" class="px-2 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-bold">
                                   📲 WhatsApp
+                                </button>
+                                <button onclick="app.deleteSampleTicket('${s.trackingId}')" class="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded text-[10px] font-bold border border-rose-200" title="Delete sample">
+                                  🗑️ Delete
                                 </button>
                               </div>
                             </div>
