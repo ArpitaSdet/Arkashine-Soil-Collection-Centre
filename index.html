@@ -29,7 +29,7 @@
   </script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261026_v2">
 
   <!-- Barcode & QR Code Generators -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -53,6 +53,7 @@
             ARKASHINE SOIL COLLECTION CENTRE
             <span class="text-[10px] uppercase font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">Operations Console</span>
             <span id="cloud-sync-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1" title="Real-time central cloud database synchronization">🟢 Cloud Live Sync</span>
+            <button onclick="app.syncWithServer(false)" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 flex items-center gap-1 transition cursor-pointer" title="Manually refresh data from central cloud database">🔄 Sync Now</button>
           </h1>
           <p class="text-[11px] text-slate-500 font-medium">End-to-End Soil Consignment Logistics, Lab Diagnostics & Farmer Advisory System</p>
         </div>
@@ -166,6 +167,6 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js"></script>
+  <script src="app.js?v=20261026_v2"></script>
 </body>
 </html>

@@ -48,9 +48,9 @@ class ArkashineApp {
     this.expandedFarmerId = null;
     this.editingFarmerId = null;
 
-    // Initial server sync & automatic 8-second background polling
+    // Initial server sync & automatic 3-second background polling for real-time sync across devices
     this.syncWithServer(false);
-    setInterval(() => this.syncWithServer(true), 8000);
+    setInterval(() => this.syncWithServer(true), 3000);
   }
 
   isUserTyping() {
@@ -74,6 +74,10 @@ class ArkashineApp {
             return;
           }
           this.data = serverData;
+          if (this.activeTicket) {
+            const fresh = this.data.soilSamples && this.data.soilSamples.find(s => s.trackingId === this.activeTicket.trackingId);
+            if (fresh) this.activeTicket = fresh;
+          }
           try { localStorage.setItem(this.storageKey, serverStr); } catch(e) {}
           this.render();
         }

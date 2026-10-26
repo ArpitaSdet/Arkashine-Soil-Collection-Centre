@@ -47,10 +47,13 @@ if (!fs.existsSync(DATA_FILE)) {
 }
 
 const server = http.createServer((req, res) => {
-  // Global CORS Headers
+  // Global CORS & No-Cache Headers (Ensures all devices always get latest data)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
