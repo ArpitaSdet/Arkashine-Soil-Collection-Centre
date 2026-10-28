@@ -58,6 +58,21 @@ class ArkashineApp {
     return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
   }
 
+  cleanPartnerCategories() {
+    if (!this.data || !this.data.shops) return;
+    let modified = false;
+    this.data.shops.forEach(s => {
+      // If user had entered "retai" in keeper or shop name but it saved as Village Soil Partner, fix it
+      if (s.category === "Village Soil Partner" && ((s.shopkeeper && s.shopkeeper.toLowerCase().includes("retai")) || (s.shopName && s.shopName.toLowerCase().includes("retail")))) {
+        s.category = "Retail Soil Partner";
+        modified = true;
+      }
+    });
+    if (modified) {
+      this.saveData();
+    }
+  }
+
   async syncWithServer(isBackground = false) {
     try {
       const res = await fetch('/api/data', { cache: 'no-cache' });
@@ -78,7 +93,8 @@ class ArkashineApp {
             const fresh = this.data.soilSamples && this.data.soilSamples.find(s => s.trackingId === this.activeTicket.trackingId);
             if (fresh) this.activeTicket = fresh;
           }
-          try { localStorage.setItem(this.storageKey, serverStr); } catch(e) {}
+          this.cleanPartnerCategories();
+          try { localStorage.setItem(this.storageKey, JSON.stringify(this.data)); } catch(e) {}
           this.render();
         }
       } else {
@@ -825,11 +841,20 @@ class ArkashineApp {
           </div>
 
           <!-- Retailer Shop Selection (visible for Retailer or All Registered) -->
-          <div id="flow-retailer-row" class="${(channel === 'Retail Soil Partner' || channel === 'All Registered Soil Collection Partners') ? '' : 'hidden'} bg-blue-50/70 p-3 rounded-xl border border-blue-200 space-y-1">
-            <label class="text-xs font-bold text-blue-900 block">Select Collection Partner Shop:</label>
-            <select id="flow-farmer-retailer" class="w-full text-xs p-2 rounded-lg border border-blue-300 bg-white font-medium">
+          <div id="flow-retailer-row" class="${(channel === 'Retail Soil Partner' || channel === 'All Registered Soil Collection Partners') ? '' : 'hidden'} bg-blue-50/70 p-3.5 rounded-2xl border border-blue-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-blue-900 block flex items-center gap-1.5">
+                <span>🏬</span> Select Collection Partner Shop:
+              </label>
+              <button type="button" onclick="app.openRegisterPartnerModal('Retail Soil Partner')" class="text-[10px] font-bold text-blue-800 bg-blue-100 hover:bg-blue-200 px-2.5 py-1 rounded-lg transition border border-blue-300 cursor-pointer shadow-2xs">
+                ➕ Add New Partner
+              </button>
+            </div>
+            <select id="flow-farmer-retailer" class="w-full text-xs p-2.5 rounded-xl border border-blue-300 bg-white font-medium">
               ${this.data.shops.map(s => `
-                <option value="${s.id}" ${t && t.collectionShopId === s.id ? 'selected' : ''}>${s.shopName} (${s.category}) - ${s.village} [Prop: ${s.shopkeeper}]</option>
+                <option value="${s.id}" ${t && t.collectionShopId === s.id ? 'selected' : ''}>
+                  ${s.category === 'Retail Soil Partner' ? '🏬' : (s.category === 'Village Soil Partner' ? '🏡' : '🏢')} ${s.shopName} [${s.category}] - ${s.village} (Prop: ${s.shopkeeper})
+                </option>
               `).join("")}
             </select>
           </div>
@@ -2001,21 +2026,55 @@ class ArkashineApp {
             </h4>
             <p class="text-[11px] text-slate-500">Village Soil Partner, Retail Soil Partner, All Registered Soil Collection Partners</p>
           </div>
-          <button onclick="app.openRegisterPartnerModal()" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg hover:bg-emerald-100 transition shadow-2xs">
+          <button onclick="app.openRegisterPartnerModal()" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer">
             + Add Partner
           </button>
         </div>
 
-        <div class="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs">
-          ${this.data.shops.map(s => `
-            <div class="p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition flex items-center justify-between">
-              <div>
-                <div class="font-bold text-slate-800">${s.shopName}</div>
-                <div class="text-[10px] text-slate-500">👤 ${s.shopkeeper} (📞 ${s.phone}) | 📍 ${s.village}</div>
+        <div class="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
+          ${this.data.shops.length === 0 ? `
+            <div class="text-center p-6 text-slate-400 italic">No collection partners registered yet. Click "+ Add Partner" above.</div>
+          ` : this.data.shops.map(s => {
+            const isRetail = s.category === "Retail Soil Partner";
+            const isHub = s.category === "All Registered Soil Collection Partners";
+            const badgeClass = isRetail
+              ? "bg-blue-100 text-blue-800 border border-blue-200"
+              : (isHub ? "bg-purple-100 text-purple-800 border border-purple-200" : "bg-emerald-100 text-emerald-800 border border-emerald-200");
+            const icon = isRetail ? "🏬" : (isHub ? "🏢" : "🏡");
+
+            return `
+              <div class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                <div>
+                  <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>${icon}</span>
+                    <span>${s.shopName}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">
+                    👤 ${s.shopkeeper} (📞 ${s.phone}) | 📍 ${s.village} ${s.address ? '• <span class="text-slate-400">' + s.address + '</span>' : ''}
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 self-end sm:self-center">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">
+                    ${s.category || 'Village Soil Partner'}
+                  </span>
+                  <button 
+                    onclick="app.openRegisterPartnerModal(null, '${s.id}')"
+                    class="px-2 py-0.5 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-800 rounded text-[10px] font-bold transition cursor-pointer"
+                    title="Edit Partner (switch Village vs Retail or update details)"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button 
+                    onclick="app.deletePartner('${s.id}')"
+                    class="px-1.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded text-[10px] font-bold transition border border-rose-200 cursor-pointer"
+                    title="Delete Partner"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">${s.category}</span>
-            </div>
-          `).join("")}
+            `;
+          }).join("")}
         </div>
       `;
     }
@@ -2147,27 +2206,307 @@ class ArkashineApp {
     }
   }
 
-  openRegisterPartnerModal() {
-    const name = prompt("Enter Collection Partner Shop Name:");
-    if (!name) return;
-    const keeper = prompt("Enter Shopkeeper / Partner Name:");
-    const phone = prompt("Enter Contact Phone Number:");
-    const village = prompt("Enter Village:");
+  closeGlobalModal() {
+    const modal = document.getElementById("global-modal");
+    if (modal) modal.innerHTML = "";
+  }
 
-    this.data.shops.push({
-      id: "SHP-" + Math.floor(100 + Math.random() * 900),
-      shopName: name,
-      shopkeeper: keeper || "Partner Owner",
-      phone: phone || "9845000000",
-      category: "Village Soil Partner",
-      village: village || "Harohalli",
-      address: "Main Road, " + (village || 'Harohalli'),
-      samplesCollected: 0
-    });
+  openRegisterPartnerModal(defaultCategory = null, editPartnerId = null) {
+    const existing = editPartnerId ? this.data.shops.find(s => s.id === editPartnerId) : null;
+    const isEdit = !!existing;
 
+    const selectedCategory = isEdit 
+      ? (existing.category || "Village Soil Partner")
+      : (defaultCategory || "Retail Soil Partner");
+
+    const shopName = isEdit ? existing.shopName : "";
+    const keeper = isEdit ? existing.shopkeeper : "";
+    const phone = isEdit ? existing.phone : "";
+    const village = isEdit ? existing.village : "";
+    const address = isEdit ? (existing.address || "") : "";
+
+    const modal = document.getElementById("global-modal");
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+          
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl">${isEdit ? '✏️' : '🏬'}</span>
+              <div>
+                <h3 class="font-black text-slate-900 text-base">
+                  ${isEdit ? 'Edit Collection Partner' : 'Register Collection Partner'}
+                </h3>
+                <p class="text-[11px] text-slate-500">
+                  Select whether this partner operates as a Village Soil Partner or Retail Soil Partner
+                </p>
+              </div>
+            </div>
+            <button onclick="app.closeGlobalModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition cursor-pointer">✕</button>
+          </div>
+
+          <!-- 1. FIRST FIELD: PARTNER CATEGORY SELECTION -->
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+            <label class="block text-xs font-black text-slate-900 uppercase tracking-wide">
+              1. Select Partner Category / Type *
+            </label>
+            <p class="text-[11px] text-slate-500 mb-2">
+              Please choose first whether this partner is Village level or Retail store level:
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <!-- Village Soil Partner -->
+              <label id="lbl-cat-village" class="flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition ${selectedCategory === 'Village Soil Partner' ? 'border-emerald-500 bg-emerald-50/80 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}">
+                <input 
+                  type="radio" 
+                  name="modal_partner_category" 
+                  value="Village Soil Partner" 
+                  ${selectedCategory === 'Village Soil Partner' ? 'checked' : ''} 
+                  onchange="app.updatePartnerModalCategoryStyle()" 
+                  class="mt-0.5 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                >
+                <div>
+                  <div class="font-bold text-xs text-emerald-950 flex items-center gap-1">
+                    <span>🏡</span> Village Soil Partner
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                    Village-level intake partner / Village partner owner
+                  </div>
+                </div>
+              </label>
+
+              <!-- Retail Soil Partner -->
+              <label id="lbl-cat-retail" class="flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition ${selectedCategory === 'Retail Soil Partner' ? 'border-blue-500 bg-blue-50/80 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}">
+                <input 
+                  type="radio" 
+                  name="modal_partner_category" 
+                  value="Retail Soil Partner" 
+                  ${selectedCategory === 'Retail Soil Partner' ? 'checked' : ''} 
+                  onchange="app.updatePartnerModalCategoryStyle()" 
+                  class="mt-0.5 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                >
+                <div>
+                  <div class="font-bold text-xs text-blue-950 flex items-center gap-1">
+                    <span>🏬</span> Retail Soil Partner
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                    Fertilizer, seed, pesticide or retail agri store
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <!-- Third option: All Registered / Central Hub -->
+            <label id="lbl-cat-hub" class="flex items-center gap-2.5 p-2 rounded-xl border cursor-pointer transition ${selectedCategory === 'All Registered Soil Collection Partners' ? 'border-purple-500 bg-purple-50/80 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}">
+              <input 
+                type="radio" 
+                name="modal_partner_category" 
+                value="All Registered Soil Collection Partners" 
+                ${selectedCategory === 'All Registered Soil Collection Partners' ? 'checked' : ''} 
+                onchange="app.updatePartnerModalCategoryStyle()" 
+                class="text-purple-600 focus:ring-purple-500 cursor-pointer"
+              >
+              <div class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <span>🏢</span> <span>Central / APMC Registered Soil Collection Hub</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Partner Details Fields -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Shop / Business Name *
+              </label>
+              <input 
+                type="text" 
+                id="partner-modal-shopname" 
+                value="${shopName}" 
+                placeholder="e.g. Chauhan Beej Bhandar" 
+                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+              >
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Partner / Shopkeeper Name *
+                </label>
+                <input 
+                  type="text" 
+                  id="partner-modal-keeper" 
+                  value="${keeper}" 
+                  placeholder="e.g. Bablu Chauhan" 
+                  class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                >
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Contact Phone (10 digits) *
+                </label>
+                <input 
+                  type="tel" 
+                  id="partner-modal-phone" 
+                  value="${phone}" 
+                  maxlength="10" 
+                  placeholder="e.g. 9793583968" 
+                  class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                >
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Village / Town / Location *
+                </label>
+                <input 
+                  type="text" 
+                  id="partner-modal-village" 
+                  value="${village}" 
+                  placeholder="e.g. Basari, Barabanki" 
+                  class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                >
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Shop Address / Landmark
+                </label>
+                <input 
+                  type="text" 
+                  id="partner-modal-address" 
+                  value="${address}" 
+                  placeholder="e.g. Main Market, Near Bus Stand" 
+                  class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Actions -->
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <button 
+              type="button" 
+              onclick="app.closeGlobalModal()" 
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button 
+              type="button" 
+              onclick="app.savePartnerModal('${editPartnerId || ''}')" 
+              class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>💾</span> <span>${isEdit ? 'Update Partner' : 'Save Partner'}</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  updatePartnerModalCategoryStyle() {
+    const val = document.querySelector('input[name="modal_partner_category"]:checked')?.value;
+    const vEl = document.getElementById("lbl-cat-village");
+    const rEl = document.getElementById("lbl-cat-retail");
+    const hEl = document.getElementById("lbl-cat-hub");
+
+    if (vEl) {
+      vEl.className = val === "Village Soil Partner" 
+        ? "flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition border-emerald-500 bg-emerald-50/80 shadow-xs" 
+        : "flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition border-slate-200 bg-white hover:border-slate-300";
+    }
+    if (rEl) {
+      rEl.className = val === "Retail Soil Partner" 
+        ? "flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition border-blue-500 bg-blue-50/80 shadow-xs" 
+        : "flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition border-slate-200 bg-white hover:border-slate-300";
+    }
+    if (hEl) {
+      hEl.className = val === "All Registered Soil Collection Partners" 
+        ? "flex items-center gap-2.5 p-2 rounded-xl border cursor-pointer transition border-purple-500 bg-purple-50/80 shadow-xs" 
+        : "flex items-center gap-2.5 p-2 rounded-xl border cursor-pointer transition border-slate-200 bg-white hover:border-slate-300";
+    }
+  }
+
+  savePartnerModal(editPartnerId = '') {
+    const catInput = document.querySelector('input[name="modal_partner_category"]:checked');
+    const category = catInput ? catInput.value : "Village Soil Partner";
+
+    const shopName = document.getElementById("partner-modal-shopname")?.value?.trim();
+    const keeper = document.getElementById("partner-modal-keeper")?.value?.trim();
+    const phone = document.getElementById("partner-modal-phone")?.value?.trim();
+    const village = document.getElementById("partner-modal-village")?.value?.trim();
+    const address = document.getElementById("partner-modal-address")?.value?.trim();
+
+    if (!shopName) {
+      alert("Please enter the Shop / Business Name.");
+      return;
+    }
+    if (!keeper) {
+      alert("Please enter the Partner / Shopkeeper Name.");
+      return;
+    }
+    if (!phone || phone.length !== 10 || isNaN(phone)) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
+    if (!village) {
+      alert("Please enter the Village / Location.");
+      return;
+    }
+
+    if (editPartnerId) {
+      const p = this.data.shops.find(s => s.id === editPartnerId);
+      if (p) {
+        p.category = category;
+        p.shopName = shopName;
+        p.shopkeeper = keeper;
+        p.phone = phone;
+        p.village = village;
+        p.address = address || ("Main Road, " + village);
+
+        if (this.data.soilSamples) {
+          this.data.soilSamples.forEach(s => {
+            if (s.collectionShopId === editPartnerId) {
+              s.collectionShopName = shopName;
+              s.partnerChannel = category;
+            }
+          });
+        }
+      }
+    } else {
+      const newId = "SHP-" + Math.floor(100 + Math.random() * 900);
+      this.data.shops.push({
+        id: newId,
+        shopName: shopName,
+        shopkeeper: keeper,
+        phone: phone,
+        category: category,
+        village: village,
+        address: address || ("Main Road, " + village),
+        samplesCollected: 0
+      });
+    }
+
+    this.closeGlobalModal();
     this.saveData();
     this.render();
-    alert("✅ Partner " + name + " registered successfully!");
+    alert("✅ Partner \"" + shopName + "\" successfully saved as " + category + "!");
+  }
+
+  deletePartner(partnerId) {
+    const partner = this.data.shops.find(s => s.id === partnerId);
+    if (!partner) return;
+    if (confirm("Are you sure you want to remove collection partner \"" + partner.shopName + "\" (" + partner.category + ")?")) {
+      this.data.shops = this.data.shops.filter(s => s.id !== partnerId);
+      this.saveData();
+      this.render();
+      alert("✅ Partner \"" + partner.shopName + "\" removed successfully across all devices!");
+    }
   }
 
   openRegisterCentreModal() {
