@@ -29,7 +29,7 @@
   </script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="style.css?v=20261028_v1">
+  <link rel="stylesheet" href="style.css?v=20261029_v1">
 
   <!-- Barcode & QR Code Generators -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -92,10 +92,18 @@
         <button 
           onclick="app.exportDataJSON()" 
           class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
-          title="Backup all data to JSON"
+          title="Backup all data to JSON file"
         >
           ⬇️ Export
         </button>
+        <button 
+          onclick="app.triggerImportJSON()" 
+          class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-semibold rounded-lg transition border border-blue-200"
+          title="Restore / Import data from backup JSON"
+        >
+          ⬆️ Import Backup
+        </button>
+        <input type="file" id="json-file-input" accept=".json" class="hidden" onchange="app.handleFileImport(event)">
         <button 
           onclick="app.resetToDemo()" 
           class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition"
@@ -167,6 +175,6 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261028_v1"></script>
+  <script src="app.js?v=20261029_v1"></script>
 </body>
 </html>

@@ -73,21 +73,109 @@ class ArkashineApp {
     }
   }
 
+  mergeDatasets(local, remote) {
+    if (!remote) return local;
+    if (!local) return remote;
+
+    const deletedSet = new Set(this.data.deletedIds || []);
+
+    const merged = {
+      villages: Array.from(new Set([...(local.villages || []), ...(remote.villages || [])])),
+      shops: [],
+      testingCentres: [],
+      farmers: [],
+      soilSamples: [],
+      deletedIds: Array.from(deletedSet)
+    };
+
+    // Merge shops
+    const shopMap = new Map();
+    (remote.shops || []).forEach(s => {
+      if (!deletedSet.has(s.id)) shopMap.set(s.id, s);
+    });
+    (local.shops || []).forEach(s => {
+      if (!deletedSet.has(s.id)) {
+        if (!shopMap.has(s.id)) {
+          shopMap.set(s.id, s);
+        }
+      }
+    });
+    merged.shops = Array.from(shopMap.values());
+
+    // Merge farmers
+    const farmerMap = new Map();
+    (remote.farmers || []).forEach(f => {
+      if (!deletedSet.has(f.id)) farmerMap.set(f.id, f);
+    });
+    (local.farmers || []).forEach(f => {
+      if (!deletedSet.has(f.id)) {
+        if (!farmerMap.has(f.id)) farmerMap.set(f.id, f);
+      }
+    });
+    merged.farmers = Array.from(farmerMap.values());
+
+    // Merge soil samples
+    const sampleMap = new Map();
+    (remote.soilSamples || []).forEach(s => {
+      if (!deletedSet.has(s.trackingId)) sampleMap.set(s.trackingId, s);
+    });
+    (local.soilSamples || []).forEach(s => {
+      if (!deletedSet.has(s.trackingId)) {
+        if (!sampleMap.has(s.trackingId)) sampleMap.set(s.trackingId, s);
+      }
+    });
+    merged.soilSamples = Array.from(sampleMap.values());
+
+    // Merge testing centres
+    const tcMap = new Map();
+    (remote.testingCentres || []).forEach(t => tcMap.set(t.id, t));
+    (local.testingCentres || []).forEach(t => {
+      if (!tcMap.has(t.id)) tcMap.set(t.id, t);
+    });
+    merged.testingCentres = Array.from(tcMap.values());
+
+    return merged;
+  }
+
   async syncWithServer(isBackground = false) {
     try {
       const res = await fetch('/api/data', { cache: 'no-cache' });
       if (res.ok) {
         const serverData = await res.json();
-        const serverStr = JSON.stringify(serverData);
-        const currentStr = JSON.stringify(this.data);
-
         this.updateSyncBadge('online');
 
-        if (serverStr !== currentStr) {
-          // Prevent background re-render while user is actively typing in a form
-          if (isBackground && this.isUserTyping()) {
-            return;
+        // Check if server rebooted from sleep and lost records that client still holds
+        const localShopsCount = (this.data.shops || []).length;
+        const serverShopsCount = (serverData.shops || []).length;
+        const localFarmersCount = (this.data.farmers || []).length;
+        const serverFarmersCount = (serverData.farmers || []).length;
+        const localSamplesCount = (this.data.soilSamples || []).length;
+        const serverSamplesCount = (serverData.soilSamples || []).length;
+
+        const serverLostData = (localShopsCount > serverShopsCount) ||
+                               (localFarmersCount > serverFarmersCount) ||
+                               (localSamplesCount > serverSamplesCount);
+
+        const merged = this.mergeDatasets(this.data, serverData);
+        const mergedStr = JSON.stringify(merged);
+        const currentStr = JSON.stringify(this.data);
+        const serverStr = JSON.stringify(serverData);
+
+        if (serverLostData || (mergedStr !== serverStr && merged.shops.length >= serverShopsCount)) {
+          // Self-heal: Automatically repopulate the rebooted server with client records!
+          this.data = merged;
+          if (this.activeTicket) {
+            const fresh = this.data.soilSamples && this.data.soilSamples.find(s => s.trackingId === this.activeTicket.trackingId);
+            if (fresh) this.activeTicket = fresh;
           }
+          this.cleanPartnerCategories();
+          this.saveData(); // saves to localStorage AND immediately POSTs to /api/data
+          this.render();
+          return;
+        }
+
+        if (serverStr !== currentStr) {
+          if (isBackground && this.isUserTyping()) return;
           this.data = serverData;
           if (this.activeTicket) {
             const fresh = this.data.soilSamples && this.data.soilSamples.find(s => s.trackingId === this.activeTicket.trackingId);
@@ -191,6 +279,33 @@ class ArkashineApp {
     document.body.appendChild(dlAnchorElem);
     dlAnchorElem.click();
     dlAnchorElem.remove();
+  }
+
+  triggerImportJSON() {
+    document.getElementById("json-file-input")?.click();
+  }
+
+  handleFileImport(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (parsed.shops || parsed.farmers || parsed.soilSamples) {
+          this.data = this.mergeDatasets(this.data, parsed);
+          this.saveData();
+          this.render();
+          alert("🎉 Backup file restored successfully! All records saved to cloud.");
+        } else {
+          alert("Invalid backup file format.");
+        }
+      } catch (err) {
+        alert("Error reading backup JSON file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
   }
 
   generateTrackingId() {
@@ -540,6 +655,9 @@ class ArkashineApp {
     }
 
     if (confirm(msg)) {
+      this.data.deletedIds = this.data.deletedIds || [];
+      this.data.deletedIds.push(farmerId);
+      farmerSamples.forEach(s => this.data.deletedIds.push(s.trackingId));
       this.data.farmers = this.data.farmers.filter(f => f.id !== farmerId);
       this.data.soilSamples = this.data.soilSamples.filter(s => s.farmerId !== farmerId && s.farmerPhone !== farmer.phone);
 
@@ -631,6 +749,8 @@ class ArkashineApp {
     if (!sample) return;
 
     if (confirm("Are you sure you want to remove sample ticket " + trackingId + " (" + sample.farmerName + ")? This action cannot be undone.")) {
+      this.data.deletedIds = this.data.deletedIds || [];
+      this.data.deletedIds.push(trackingId);
       this.data.soilSamples = this.data.soilSamples.filter(s => s.trackingId !== trackingId);
       if (this.activeTicket && this.activeTicket.trackingId === trackingId) {
         this.activeTicket = null;
@@ -2026,9 +2146,14 @@ class ArkashineApp {
             </h4>
             <p class="text-[11px] text-slate-500">Village Soil Partner, Retail Soil Partner, All Registered Soil Collection Partners</p>
           </div>
-          <button onclick="app.openRegisterPartnerModal()" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer">
-            + Add Partner
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="app.openBulkImportPartnersModal()" class="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition shadow-2xs cursor-pointer border border-blue-200 flex items-center gap-1" title="Paste multiple retailers from Excel, Sheets, or WhatsApp">
+              <span>📋</span> Bulk Paste / Import
+            </button>
+            <button onclick="app.openRegisterPartnerModal()" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer border border-emerald-200">
+              + Add Partner
+            </button>
+          </div>
         </div>
 
         <div class="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
@@ -2209,6 +2334,106 @@ class ArkashineApp {
   closeGlobalModal() {
     const modal = document.getElementById("global-modal");
     if (modal) modal.innerHTML = "";
+  }
+
+  openBulkImportPartnersModal() {
+    const modal = document.getElementById("global-modal");
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">📋</span>
+              <div>
+                <h3 class="font-black text-slate-900 text-base">Bulk Paste & Import Retailers</h3>
+                <p class="text-[11px] text-slate-500">Quickly add 10, 20, or 50+ retailers from Excel, Google Sheets, or WhatsApp text</p>
+              </div>
+            </div>
+            <button onclick="app.closeGlobalModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition cursor-pointer">✕</button>
+          </div>
+
+          <div class="bg-blue-50/70 p-3.5 rounded-2xl border border-blue-200 space-y-2">
+            <label class="block text-xs font-bold text-blue-950 uppercase">Import Category</label>
+            <div class="flex gap-4 text-xs font-semibold">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="bulk_import_cat" value="Retail Soil Partner" checked class="text-blue-600">
+                <span>🏬 Retail Soil Partner (Recommended)</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="bulk_import_cat" value="Village Soil Partner" class="text-emerald-600">
+                <span>🏡 Village Soil Partner</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Paste Your Retailers List (One per line):</label>
+            <p class="text-[11px] text-slate-400 mb-1.5">Format: <b>Shop Name, Owner Name, Phone, Village</b> (comma, tab, or dash separated)</p>
+            <textarea id="bulk-partners-textarea" rows="8" placeholder="Example:
+Chauhan Beej Bhandar, Bablu Chauhan, 9793583968, Barabanki
+Kisan Seva Kendra, Rajesh Kumar, 9876543210, Harohalli
+Agri Input Centre, Suresh Gowda, 9845012345, Ramanagara" class="w-full text-xs font-mono p-3 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-slate-50"></textarea>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+            <span class="text-[11px] text-slate-400">Rows are automatically parsed and saved directly into the cloud.</span>
+            <div class="flex gap-2">
+              <button onclick="app.closeGlobalModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer">Cancel</button>
+              <button onclick="app.executeBulkImportPartners()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
+                <span>⚡</span> <span>Import All Retailers</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  executeBulkImportPartners() {
+    const text = document.getElementById("bulk-partners-textarea")?.value?.trim();
+    if (!text) {
+      alert("Please paste retailer rows into the text box first.");
+      return;
+    }
+    const catInput = document.querySelector('input[name="bulk_import_cat"]:checked');
+    const category = catInput ? catInput.value : "Retail Soil Partner";
+
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    let addedCount = 0;
+
+    lines.forEach(line => {
+      let parts = line.split(/[\t,|]/).map(p => p.trim());
+      if (parts.length === 1 && line.includes(" - ")) {
+        parts = line.split(" - ").map(p => p.trim());
+      }
+      if (parts.length > 0 && parts[0]) {
+        const shopName = parts[0];
+        const keeper = parts[1] || "Partner Owner";
+        const rawPhone = parts[2] ? parts[2].replace(/\D/g, "") : "";
+        const phone = (rawPhone.length >= 10 ? rawPhone.slice(-10) : (rawPhone || "9845000000"));
+        const village = parts[3] || "Karnataka Region";
+
+        const newId = "SHP-" + Math.floor(100 + Math.random() * 900);
+        this.data.shops.push({
+          id: newId,
+          shopName,
+          shopkeeper: keeper,
+          phone,
+          category,
+          village,
+          address: "Main Road, " + village,
+          samplesCollected: 0
+        });
+        addedCount++;
+      }
+    });
+
+    this.closeGlobalModal();
+    this.saveData();
+    this.render();
+    alert(`🎉 Successfully imported and saved ${addedCount} retailers as ${category} to the central cloud!`);
   }
 
   openRegisterPartnerModal(defaultCategory = null, editPartnerId = null) {
@@ -2502,6 +2727,8 @@ class ArkashineApp {
     const partner = this.data.shops.find(s => s.id === partnerId);
     if (!partner) return;
     if (confirm("Are you sure you want to remove collection partner \"" + partner.shopName + "\" (" + partner.category + ")?")) {
+      this.data.deletedIds = this.data.deletedIds || [];
+      this.data.deletedIds.push(partnerId);
       this.data.shops = this.data.shops.filter(s => s.id !== partnerId);
       this.saveData();
       this.render();
