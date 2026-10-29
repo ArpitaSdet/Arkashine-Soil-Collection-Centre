@@ -147,6 +147,42 @@ const server = http.createServer((req, res) => {
 
   const parsedUrl = req.url.split('?')[0];
 
+  // ─── API: GET /api/status (Diagnostic & Neon DB Health Check) ────────
+  if (req.method === 'GET' && parsedUrl === '/api/status') {
+    if (dbPool) {
+      dbPool.query('SELECT NOW() as current_time, COUNT(*) as rows FROM app_state')
+        .then(result => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            status: 'online',
+            database: 'Neon PostgreSQL (Active & Connected)',
+            dbTime: result.rows[0].current_time,
+            persistedRows: result.rows[0].rows,
+            permanentStorage: 'Active (Never deletes on sleep or restart)'
+          }));
+        })
+        .catch(err => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            status: 'online',
+            database: 'Neon connection error',
+            error: err.message,
+            fallback: 'Local Disk Active'
+          }));
+        });
+      return;
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'online',
+      database: 'Local Disk (Fallback)',
+      neonStatus: 'Waiting for DATABASE_URL environment variable in Render Dashboard',
+      instruction: 'Add DATABASE_URL in Render Dashboard -> Environment to activate Neon PostgreSQL'
+    }));
+    return;
+  }
+
   // ─── API: GET /api/data (Central Database Read) ──────────────────────
   if (req.method === 'GET' && parsedUrl === '/api/data') {
     if (dbPool) {
