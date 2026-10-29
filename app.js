@@ -64,6 +64,13 @@ class ArkashineApp {
     this.expandedFarmerId = null;
     this.editingFarmerId = null;
 
+    if (!this.data.users || this.data.users.length === 0) {
+      this.data.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
+    }
+    if (this.data.shops) {
+      this.data.shops = this.data.shops.filter(s => s.shopName !== "xyz");
+    }
+
     // Fast 2-second background sync for true real-time multi-device collaboration
     this.syncWithServer(false);
     setInterval(() => this.syncWithServer(true), 2000);
@@ -180,6 +187,12 @@ class ArkashineApp {
       const res = await fetch('/api/data', { cache: 'no-cache' });
       if (res.ok) {
         const serverData = await res.json();
+        if (!serverData.users || serverData.users.length === 0) {
+          serverData.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
+        }
+        if (serverData.shops) {
+          serverData.shops = serverData.shops.filter(s => s.shopName !== "xyz");
+        }
         this.updateSyncBadge('online');
 
         // Check if server rebooted from sleep and lost records that client still holds
