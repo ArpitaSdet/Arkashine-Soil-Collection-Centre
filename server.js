@@ -40,7 +40,18 @@ const DEFAULT_SERVER_DATA = {
     { id: "TC-MACH-102", name: "Field Unit 2 - Mandya Mobile Testing Centre", type: "Deployed Machine", machineSerial: "ARK-PORT-SCANNER-M09", operatorName: "Pooja Hegde (Testing Executive)", operatorPhone: "9880033445", location: "Near Sugar Factory Circle, Mandya", dateDeployed: "2026-05-20", status: "Active", totalTestsCount: 0 }
   ],
   farmers: [],
-  soilSamples: []
+  soilSamples: [],
+  users: [
+    {
+      id: "USR-ADMIN",
+      fullName: "Operations Admin",
+      username: "admin",
+      phone: "9845011223",
+      role: "Operations Manager",
+      password: "password123",
+      createdAt: "2026-10-29"
+    }
+  ]
 };
 
 // Ensure data.json exists locally as disk backup

@@ -29,7 +29,7 @@
   </script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="style.css?v=20261029_v1">
+  <link rel="stylesheet" href="style.css?v=20261029_v2">
 
   <!-- Barcode & QR Code Generators -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -104,13 +104,8 @@
           ⬆️ Import Backup
         </button>
         <input type="file" id="json-file-input" accept=".json" class="hidden" onchange="app.handleFileImport(event)">
-        <button 
-          onclick="app.resetToDemo()" 
-          class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition"
-          title="Reset to default demo data"
-        >
-          🔄 Reset
-        </button>
+        <!-- User Profile & Logout -->
+        <div id="auth-user-bar" class="flex items-center gap-2"></div>
       </div>
 
     </div>
@@ -166,6 +161,9 @@
   </main>
 
 
+  <!-- Authentication Modal (Login / Register) -->
+  <div id="auth-modal-overlay"></div>
+
   <!-- Global Modal for quick popups -->
   <div id="global-modal"></div>
 
@@ -175,6 +173,6 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261029_v1"></script>
+  <script src="app.js?v=20261029_v2"></script>
 </body>
 </html>

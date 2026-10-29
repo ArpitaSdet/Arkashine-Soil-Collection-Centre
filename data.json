@@ -101,16 +101,6 @@
       "village": "Harohalli",
       "address": "Main Road, Harohalli",
       "samplesCollected": 0
-    },
-    {
-      "id": "SHP-204",
-      "shopName": "xyz",
-      "shopkeeper": "Retail soil partner",
-      "phone": "1234567890",
-      "category": "Retail Soil Partner",
-      "village": "Barabanki",
-      "address": "Station Road, Barabanki",
-      "samplesCollected": 0
     }
   ],
   "testingCentres": [
@@ -152,5 +142,16 @@
     }
   ],
   "farmers": [],
-  "soilSamples": []
+  "soilSamples": [],
+  "users": [
+    {
+      "id": "USR-ADMIN",
+      "fullName": "Operations Admin",
+      "username": "admin",
+      "phone": "9845011223",
+      "role": "Operations Manager",
+      "password": "password123",
+      "createdAt": "2026-10-29"
+    }
+  ]
 }

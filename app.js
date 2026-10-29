@@ -32,12 +32,28 @@ const INITIAL_DATA = {
     { id: "TC-MACH-102", name: "Field Unit 2 - Mandya Mobile Testing Centre", type: "Deployed Machine", machineSerial: "ARK-PORT-SCANNER-M09", operatorName: "Pooja Hegde (Testing Executive)", operatorPhone: "9880033445", location: "Near Sugar Factory Circle, Mandya", dateDeployed: "2026-05-20", status: "Active", totalTestsCount: 0 }
   ],
   farmers: [],
-  soilSamples: []
+  soilSamples: [],
+  users: [
+    {
+      id: "USR-ADMIN",
+      fullName: "Operations Admin",
+      username: "admin",
+      phone: "9845011223",
+      role: "Operations Manager",
+      password: "password123",
+      createdAt: "2026-10-29"
+    }
+  ]
 };
 
 class ArkashineApp {
   constructor() {
     this.storageKey = "ARKASHINE_DASHBOARD_DATA_SHARED_V1";
+    this.authKey = "ARKASHINE_AUTH_SESSION_V1";
+    this.currentUser = this.loadAuthUser();
+    this.authTab = 'login'; // 'login' or 'register'
+    this.authFeedback = null;
+    this.prefilledLoginUser = '';
     this.data = this.loadData();
     this.activeStep = 1; // 1: Register/Batch, 2: Pickup, 3: Testing, 4: Certificate, 5: Advisory
     this.activeTicket = null;
@@ -48,9 +64,9 @@ class ArkashineApp {
     this.expandedFarmerId = null;
     this.editingFarmerId = null;
 
-    // Initial server sync & automatic 3-second background polling for real-time sync across devices
+    // Fast 2-second background sync for true real-time multi-device collaboration
     this.syncWithServer(false);
-    setInterval(() => this.syncWithServer(true), 3000);
+    setInterval(() => this.syncWithServer(true), 2000);
   }
 
   isUserTyping() {
@@ -133,6 +149,28 @@ class ArkashineApp {
       if (!tcMap.has(t.id)) tcMap.set(t.id, t);
     });
     merged.testingCentres = Array.from(tcMap.values());
+
+    // Merge registered user accounts
+    const userMap = new Map();
+    (remote.users || []).forEach(u => userMap.set(u.id || u.username, u));
+    (local.users || []).forEach(u => {
+      const key = u.id || u.username;
+      if (!userMap.has(key)) userMap.set(key, u);
+    });
+    merged.users = Array.from(userMap.values());
+    if (merged.users.length === 0) {
+      merged.users = [
+        {
+          id: "USR-ADMIN",
+          fullName: "Operations Admin",
+          username: "admin",
+          phone: "9845011223",
+          role: "Operations Manager",
+          password: "password123",
+          createdAt: "2026-10-29"
+        }
+      ];
+    }
 
     return merged;
   }
@@ -219,6 +257,10 @@ class ArkashineApp {
         if (!parsed.villages) parsed.villages = [...PRESET_VILLAGES];
         if (!parsed.farmers) parsed.farmers = [];
         if (!parsed.soilSamples) parsed.soilSamples = [];
+        if (!parsed.shops) parsed.shops = [...INITIAL_DATA.shops];
+        if (!parsed.users || parsed.users.length === 0) parsed.users = [...INITIAL_DATA.users];
+        // Clean out any dummy test shops
+        parsed.shops = parsed.shops.filter(s => s.shopName !== "xyz");
         return parsed;
       }
     } catch (e) {
@@ -268,7 +310,7 @@ class ArkashineApp {
   }
 
   resetToDemo() {
-    this.clearAllData();
+    console.warn("Reset button has been hidden and disabled to safeguard live database records.");
   }
 
   exportDataJSON() {
@@ -786,8 +828,370 @@ class ArkashineApp {
     alert("✅ Batch & Bag configuration updated successfully: " + newBags + " Bags Total | " + newCap + " Samples/Bag Capacity!");
   }
 
+  // ─── AUTHENTICATION & ACCESS CONTROL ─────────────────────────────
+  loadAuthUser() {
+    try {
+      const s = localStorage.getItem("ARKASHINE_AUTH_SESSION_V1");
+      return s ? JSON.parse(s) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  logoutUser() {
+    if (confirm("Are you sure you want to log out of the Arkashine Operations console?")) {
+      this.currentUser = null;
+      localStorage.removeItem("ARKASHINE_AUTH_SESSION_V1");
+      this.authTab = 'login';
+      this.authFeedback = null;
+      this.render();
+    }
+  }
+
+  switchAuthTab(tab) {
+    this.authTab = tab;
+    this.authFeedback = null;
+    this.renderAuthUI();
+  }
+
+  handleLoginSubmit(event) {
+    if (event) event.preventDefault();
+    const userField = document.getElementById("auth-login-username")?.value?.trim();
+    const passField = document.getElementById("auth-login-password")?.value;
+
+    if (!userField || !passField) {
+      this.authFeedback = { type: "error", message: "Please enter your username/mobile and password." };
+      this.renderAuthUI();
+      return;
+    }
+
+    const users = this.data.users || [];
+    const matched = users.find(u => 
+      (u.username?.toLowerCase() === userField.toLowerCase() || u.phone === userField) && 
+      u.password === passField
+    );
+
+    if (matched) {
+      this.currentUser = {
+        id: matched.id,
+        fullName: matched.fullName,
+        username: matched.username,
+        role: matched.role,
+        phone: matched.phone
+      };
+      localStorage.setItem("ARKASHINE_AUTH_SESSION_V1", JSON.stringify(this.currentUser));
+      this.authFeedback = null;
+      this.render();
+    } else {
+      this.authFeedback = { 
+        type: "error", 
+        message: "Invalid username or password. Click 'Create Account' below to sign up." 
+      };
+      this.renderAuthUI();
+    }
+  }
+
+  handleRegisterSubmit(event) {
+    if (event) event.preventDefault();
+    const fullName = document.getElementById("auth-reg-name")?.value?.trim();
+    const username = document.getElementById("auth-reg-username")?.value?.trim();
+    const phone = document.getElementById("auth-reg-phone")?.value?.trim();
+    const role = document.getElementById("auth-reg-role")?.value;
+    const password = document.getElementById("auth-reg-password")?.value;
+    const confirmPass = document.getElementById("auth-reg-confirm")?.value;
+
+    if (!fullName || !username || !phone || !password) {
+      this.authFeedback = { type: "error", message: "Please fill in all required fields." };
+      this.renderAuthUI();
+      return;
+    }
+
+    if (phone.length !== 10 || isNaN(phone)) {
+      this.authFeedback = { type: "error", message: "Please enter a valid 10-digit mobile number." };
+      this.renderAuthUI();
+      return;
+    }
+
+    if (password.length < 4) {
+      this.authFeedback = { type: "error", message: "Password must be at least 4 characters long." };
+      this.renderAuthUI();
+      return;
+    }
+
+    if (password !== confirmPass) {
+      this.authFeedback = { type: "error", message: "Passwords do not match. Please re-enter." };
+      this.renderAuthUI();
+      return;
+    }
+
+    this.data.users = this.data.users || [];
+    const existing = this.data.users.find(u => 
+      u.username?.toLowerCase() === username.toLowerCase() || u.phone === phone
+    );
+
+    if (existing) {
+      this.authFeedback = { type: "error", message: "A user with this username or mobile already exists. Please log in." };
+      this.renderAuthUI();
+      return;
+    }
+
+    const newUser = {
+      id: "USR-" + Math.floor(1000 + Math.random() * 9000),
+      fullName,
+      username,
+      phone,
+      role: role || "Operations Officer",
+      password,
+      createdAt: new Date().toISOString()
+    };
+
+    this.data.users.push(newUser);
+    this.saveData(); // saves locally and broadcasts to central cloud / Neon DB
+
+    this.authTab = 'login';
+    this.authFeedback = {
+      type: "success",
+      message: `🎉 Account created for ${fullName}! Please sign in below.`
+    };
+    this.prefilledLoginUser = username;
+    this.renderAuthUI();
+  }
+
+  renderAuthUI() {
+    // 1. Render User profile in Header
+    const userBar = document.getElementById("auth-user-bar");
+    if (userBar) {
+      if (this.currentUser) {
+        userBar.innerHTML = `
+          <div class="flex items-center gap-2 px-2.5 py-1 bg-slate-100 rounded-xl border border-slate-200 text-xs shadow-2xs">
+            <span class="w-6 h-6 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-[10px]">
+              ${(this.currentUser.fullName || this.currentUser.username || 'U').charAt(0).toUpperCase()}
+            </span>
+            <div class="leading-tight text-left">
+              <div class="font-bold text-slate-800 text-[11px] truncate max-w-[120px] sm:max-w-none">
+                ${this.currentUser.fullName || this.currentUser.username}
+              </div>
+              <div class="text-[9px] text-emerald-700 font-bold">${this.currentUser.role || 'Officer'}</div>
+            </div>
+            <button 
+              onclick="app.logoutUser()" 
+              class="ml-1 text-[10px] font-bold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2 py-0.5 rounded-lg border border-rose-200 transition cursor-pointer"
+              title="Sign out of console"
+            >
+              Logout
+            </button>
+          </div>
+        `;
+      } else {
+        userBar.innerHTML = `
+          <button 
+            onclick="app.authTab = 'login'; app.renderAuthUI();" 
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+          >
+            <span>🔐</span> Login
+          </button>
+        `;
+      }
+    }
+
+    // 2. Render Auth Modal Overlay if not logged in
+    const authOverlay = document.getElementById("auth-modal-overlay");
+    if (!authOverlay) return;
+
+    if (this.currentUser) {
+      authOverlay.innerHTML = "";
+      return;
+    }
+
+    const isLogin = this.authTab !== 'register';
+
+    authOverlay.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-150">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
+          
+          <!-- Brand Header -->
+          <div class="bg-gradient-to-r from-emerald-800 to-emerald-950 p-6 text-white text-center space-y-1">
+            <div class="w-12 h-12 bg-white/10 backdrop-blur-xs rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner mb-2">
+              🌱
+            </div>
+            <h2 class="font-black text-base tracking-tight uppercase">Arkashine Soil Collection Centre</h2>
+            <p class="text-xs text-emerald-200/80">Operations Console & Chain-of-Custody Tracking</p>
+          </div>
+
+          <!-- Tab Switcher -->
+          <div class="flex border-b border-slate-200 bg-slate-50 text-xs font-bold">
+            <button 
+              type="button"
+              onclick="app.switchAuthTab('login')"
+              class="flex-1 py-3 text-center transition cursor-pointer ${isLogin ? 'bg-white text-emerald-800 border-b-2 border-emerald-600 font-black' : 'text-slate-500 hover:text-slate-800'}"
+            >
+              🔐 Sign In
+            </button>
+            <button 
+              type="button"
+              onclick="app.switchAuthTab('register')"
+              class="flex-1 py-3 text-center transition cursor-pointer ${!isLogin ? 'bg-white text-emerald-800 border-b-2 border-emerald-600 font-black' : 'text-slate-500 hover:text-slate-800'}"
+            >
+              ➕ Create Account
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 space-y-4">
+            
+            ${this.authFeedback ? `
+              <div class="p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${this.authFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}">
+                <span>${this.authFeedback.type === 'success' ? '✔' : '⚠️'}</span>
+                <span>${this.authFeedback.message}</span>
+              </div>
+            ` : ''}
+
+            ${isLogin ? `
+              <!-- LOGIN FORM -->
+              <form onsubmit="app.handleLoginSubmit(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username or Mobile Number</label>
+                  <input 
+                    type="text" 
+                    id="auth-login-username" 
+                    value="${this.prefilledLoginUser || ''}"
+                    placeholder="e.g. admin or 9845000000" 
+                    required 
+                    class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                  >
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                  <input 
+                    type="password" 
+                    id="auth-login-password" 
+                    placeholder="Enter password" 
+                    required 
+                    class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                  >
+                </div>
+
+                <button 
+                  type="submit" 
+                  class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>🔓</span> Sign In to Operations
+                </button>
+
+                <div class="text-center pt-2">
+                  <button 
+                    type="button" 
+                    onclick="app.switchAuthTab('register')" 
+                    class="text-xs text-emerald-700 hover:text-emerald-900 font-bold hover:underline cursor-pointer"
+                  >
+                    Don't have an account? Create one now ➔
+                  </button>
+                </div>
+
+                <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-500 text-center">
+                  Default Admin Access: Username: <code class="font-bold text-slate-800">admin</code> | Password: <code class="font-bold text-slate-800">password123</code>
+                </div>
+              </form>
+            ` : `
+              <!-- REGISTRATION FORM -->
+              <form onsubmit="app.handleRegisterSubmit(event)" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
+                  <input 
+                    type="text" 
+                    id="auth-reg-name" 
+                    placeholder="e.g. Anand Murthy" 
+                    required 
+                    class="w-full text-xs p-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                  >
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username *</label>
+                    <input 
+                      type="text" 
+                      id="auth-reg-username" 
+                      placeholder="e.g. anand_m" 
+                      required 
+                      class="w-full text-xs p-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile (10 digits) *</label>
+                    <input 
+                      type="tel" 
+                      id="auth-reg-phone" 
+                      maxlength="10" 
+                      placeholder="9880000000" 
+                      required 
+                      class="w-full text-xs p-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                    >
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Your Operational Role *</label>
+                  <select id="auth-reg-role" class="w-full text-xs p-2 rounded-xl border border-slate-300 bg-white font-semibold focus:ring-2 focus:ring-emerald-500">
+                    <option value="Lab Chemist">🔬 Lab Chemist / Diagnostics Officer</option>
+                    <option value="Logistics Runner">🚚 Logistics Runner / Field Collector</option>
+                    <option value="Village Soil Partner">🏡 Village Soil Partner</option>
+                    <option value="Retail Soil Partner">🏬 Retail Soil Partner</option>
+                    <option value="Operations Officer" selected>👨‍💼 Operations Officer / Manager</option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password *</label>
+                    <input 
+                      type="password" 
+                      id="auth-reg-password" 
+                      placeholder="Min 4 chars" 
+                      required 
+                      class="w-full text-xs p-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Confirm Password *</label>
+                    <input 
+                      type="password" 
+                      id="auth-reg-confirm" 
+                      placeholder="Re-type password" 
+                      required 
+                      class="w-full text-xs p-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-emerald-500"
+                    >
+                  </div>
+                </div>
+
+                <button 
+                  type="submit" 
+                  class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>✔</span> Create My Account
+                </button>
+
+                <div class="text-center pt-1">
+                  <button 
+                    type="button" 
+                    onclick="app.switchAuthTab('login')" 
+                    class="text-xs text-slate-500 hover:text-slate-800 font-semibold hover:underline cursor-pointer"
+                  >
+                    Already have an account? Back to Login ➔
+                  </button>
+                </div>
+              </form>
+            `}
+
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // ─── MASTER RENDER ────────────────────────────────────────────────────
   render() {
+    this.renderAuthUI();
     this.renderQuickStats();
     this.renderWorkflowBoard();
     this.renderBagsTrackerBox();
