@@ -2,9 +2,11 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
+const { Pool } = require('pg');
 
 const PORT = process.env.PORT || 8000;
 const DATA_FILE = path.join(__dirname, 'data.json');
+const DATABASE_URL = process.env.DATABASE_URL;
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -41,9 +43,61 @@ const DEFAULT_SERVER_DATA = {
   soilSamples: []
 };
 
-// Ensure data.json exists
+// Ensure data.json exists locally as disk backup
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(DEFAULT_SERVER_DATA, null, 2), 'utf-8');
+}
+
+// ─── NEON DATABASE SETUP ────────────────────────────────────────────────
+let dbPool = null;
+
+if (DATABASE_URL) {
+  try {
+    dbPool = new Pool({
+      connectionString: DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+
+    dbPool.query(`
+      CREATE TABLE IF NOT EXISTS app_state (
+        id VARCHAR(50) PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `).then(() => {
+      console.log('✅ Connected to Neon Database! Permanent storage active.');
+      return dbPool.query("SELECT id FROM app_state WHERE id = 'arkashine_central'");
+    }).then(res => {
+      if (res && res.rows.length === 0) {
+        let initData = DEFAULT_SERVER_DATA;
+        if (fs.existsSync(DATA_FILE)) {
+          try { initData = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch(e) {}
+        }
+        return dbPool.query(
+          "INSERT INTO app_state (id, data, updated_at) VALUES ('arkashine_central', $1, CURRENT_TIMESTAMP)",
+          [initData]
+        );
+      }
+    }).catch(err => {
+      console.error('⚠️ Neon Database init error:', err.message);
+    });
+  } catch (e) {
+    console.error('⚠️ Failed to initialize Neon Pool:', e.message);
+  }
+} else {
+  console.log('ℹ️ Running without DATABASE_URL: using local data.json fallback.');
+}
+
+function serveFromDisk(res) {
+  fs.readFile(DATA_FILE, 'utf-8', (err, data) => {
+    if (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Failed to read server data' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(data);
+  });
 }
 
 const server = http.createServer((req, res) => {
@@ -65,15 +119,24 @@ const server = http.createServer((req, res) => {
 
   // ─── API: GET /api/data (Central Database Read) ──────────────────────
   if (req.method === 'GET' && parsedUrl === '/api/data') {
-    fs.readFile(DATA_FILE, 'utf-8', (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Failed to read server data' }));
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(data);
-    });
+    if (dbPool) {
+      dbPool.query("SELECT data FROM app_state WHERE id = 'arkashine_central'")
+        .then(result => {
+          if (result.rows.length > 0) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result.rows[0].data));
+          } else {
+            serveFromDisk(res);
+          }
+        })
+        .catch(err => {
+          console.error("Neon read error, falling back to disk:", err.message);
+          serveFromDisk(res);
+        });
+      return;
+    }
+
+    serveFromDisk(res);
     return;
   }
 
@@ -87,9 +150,30 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const parsed = JSON.parse(body);
-        fs.writeFileSync(DATA_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
+
+        // Save local backup file
+        try { fs.writeFileSync(DATA_FILE, JSON.stringify(parsed, null, 2), 'utf-8'); } catch(e) {}
+
+        if (dbPool) {
+          dbPool.query(`
+            INSERT INTO app_state (id, data, updated_at)
+            VALUES ('arkashine_central', $1, CURRENT_TIMESTAMP)
+            ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = CURRENT_TIMESTAMP;
+          `, [parsed])
+          .then(() => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, storage: 'neon_postgres', timestamp: new Date().toISOString() }));
+          })
+          .catch(err => {
+            console.error("Neon write error:", err.message);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, storage: 'disk_fallback', timestamp: new Date().toISOString() }));
+          });
+          return;
+        }
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, timestamp: new Date().toISOString() }));
+        res.end(JSON.stringify({ success: true, storage: 'disk', timestamp: new Date().toISOString() }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
@@ -126,6 +210,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(` Arkashine Soil Collection Centre Tracking Dashboard`);
   console.log(` Server running on port: ${PORT}`);
   console.log(` Shared Central API Endpoint : http://localhost:${PORT}/api/data`);
+  console.log(` Neon Database: ${DATABASE_URL ? 'CONFIGURED (Cloud Persistence Active)' : 'Not configured (Local Disk Mode)'}`);
   console.log(` Local URL : ${url}`);
   console.log(`=======================================================`);
   
