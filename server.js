@@ -54,10 +54,26 @@ const DEFAULT_SERVER_DATA = {
   ]
 };
 
-// Ensure data.json exists locally as disk backup
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(DEFAULT_SERVER_DATA, null, 2), 'utf-8');
+function sanitizeServerData(obj) {
+  if (!obj || typeof obj !== 'object') obj = JSON.parse(JSON.stringify(DEFAULT_SERVER_DATA));
+  if (!obj.users || obj.users.length === 0) {
+    obj.users = JSON.parse(JSON.stringify(DEFAULT_SERVER_DATA.users));
+  }
+  if (obj.shops) {
+    obj.shops = obj.shops.filter(s => s.shopName !== 'xyz');
+  }
+  return obj;
 }
+
+// Ensure data.json exists locally as disk backup
+try {
+  let initial = null;
+  if (fs.existsSync(DATA_FILE)) {
+    try { initial = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')); } catch(e) {}
+  }
+  initial = sanitizeServerData(initial);
+  fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2), 'utf-8');
+} catch(e) {}
 
 // ─── NEON DATABASE SETUP ────────────────────────────────────────────────
 let dbPool = null;
@@ -100,15 +116,18 @@ if (DATABASE_URL) {
 }
 
 function serveFromDisk(res) {
-  fs.readFile(DATA_FILE, 'utf-8', (err, data) => {
-    if (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to read server data' }));
-      return;
+  try {
+    let dataObj = null;
+    if (fs.existsSync(DATA_FILE)) {
+      dataObj = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
     }
+    dataObj = sanitizeServerData(dataObj);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(data);
-  });
+    res.end(JSON.stringify(dataObj));
+  } catch (err) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(DEFAULT_SERVER_DATA));
+  }
 }
 
 const server = http.createServer((req, res) => {
