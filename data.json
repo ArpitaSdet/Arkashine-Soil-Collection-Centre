@@ -71,6 +71,46 @@
       "village": "Ramanagara",
       "address": "APMC Yard, Ramanagara",
       "samplesCollected": 0
+    },
+    {
+      "id": "SHP-201",
+      "shopName": "Chauhan beej Bhandar",
+      "shopkeeper": "Bablu chauhan",
+      "phone": "9793583968",
+      "category": "Retail Soil Partner",
+      "village": "Basari, Barabanki",
+      "address": "Basari Circle, Barabanki",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-202",
+      "shopName": "Chauhan beej Bhandar",
+      "shopkeeper": "Ramlalhan chauhan",
+      "phone": "9956988300",
+      "category": "Retail Soil Partner",
+      "village": "Rampur Mathura, Sitapur",
+      "address": "Market Road, Sitapur",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-203",
+      "shopName": "Chauhan beej Bhandar",
+      "shopkeeper": "Partner Owner",
+      "phone": "9845000000",
+      "category": "Retail Soil Partner",
+      "village": "Harohalli",
+      "address": "Main Road, Harohalli",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-204",
+      "shopName": "xyz",
+      "shopkeeper": "Retail soil partner",
+      "phone": "1234567890",
+      "category": "Retail Soil Partner",
+      "village": "Barabanki",
+      "address": "Station Road, Barabanki",
+      "samplesCollected": 0
     }
   ],
   "testingCentres": [
