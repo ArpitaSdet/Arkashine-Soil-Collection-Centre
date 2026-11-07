@@ -78,7 +78,26 @@ class ArkashineApp {
 
   isUserTyping() {
     const el = document.activeElement;
-    return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+    if (!el) return false;
+    const tag = (el.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    const authOverlay = document.getElementById("auth-modal-overlay");
+    if (authOverlay && authOverlay.contains(el)) return true;
+    const globalModal = document.getElementById("global-modal");
+    if (globalModal && globalModal.contains(el)) return true;
+    return false;
+  }
+
+  stableStringify(obj) {
+    if (obj === null || typeof obj !== 'object') {
+      return JSON.stringify(obj);
+    }
+    if (Array.isArray(obj)) {
+      return '[' + obj.map(item => this.stableStringify(item)).join(',') + ']';
+    }
+    const keys = Object.keys(obj).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + this.stableStringify(obj[k])).join(',') + '}';
   }
 
   cleanPartnerCategories() {
@@ -183,6 +202,11 @@ class ArkashineApp {
   }
 
   async syncWithServer(isBackground = false) {
+    // If the user is currently typing in ANY input field, do not disrupt them
+    if (isBackground && this.isUserTyping()) {
+      return;
+    }
+
     try {
       const res = await fetch('/api/data', { cache: 'no-cache' });
       if (res.ok) {
@@ -195,7 +219,21 @@ class ArkashineApp {
         }
         this.updateSyncBadge('online');
 
-        // Check if server rebooted from sleep and lost records that client still holds
+        // Check if server and client have the exact same contents
+        const currentStr = this.stableStringify(this.data);
+        const serverStr = this.stableStringify(serverData);
+
+        if (currentStr === serverStr) {
+          // Both in perfect sync - do nothing!
+          return;
+        }
+
+        // If user started typing while network request was in flight, abort DOM updates
+        if (isBackground && this.isUserTyping()) {
+          return;
+        }
+
+        // Check if client has local records that server is missing (e.g. offline edits)
         const localShopsCount = (this.data.shops || []).length;
         const serverShopsCount = (serverData.shops || []).length;
         const localFarmersCount = (this.data.farmers || []).length;
@@ -207,35 +245,28 @@ class ArkashineApp {
                                (localFarmersCount > serverFarmersCount) ||
                                (localSamplesCount > serverSamplesCount);
 
-        const merged = this.mergeDatasets(this.data, serverData);
-        const mergedStr = JSON.stringify(merged);
-        const currentStr = JSON.stringify(this.data);
-        const serverStr = JSON.stringify(serverData);
-
-        if (serverLostData || (mergedStr !== serverStr && merged.shops.length >= serverShopsCount)) {
-          // Self-heal: Automatically repopulate the rebooted server with client records!
+        if (serverLostData) {
+          const merged = this.mergeDatasets(this.data, serverData);
           this.data = merged;
           if (this.activeTicket) {
             const fresh = this.data.soilSamples && this.data.soilSamples.find(s => s.trackingId === this.activeTicket.trackingId);
             if (fresh) this.activeTicket = fresh;
           }
           this.cleanPartnerCategories();
-          this.saveData(); // saves to localStorage AND immediately POSTs to /api/data
+          this.saveData();
           this.render();
           return;
         }
 
-        if (serverStr !== currentStr) {
-          if (isBackground && this.isUserTyping()) return;
-          this.data = serverData;
-          if (this.activeTicket) {
-            const fresh = this.data.soilSamples && this.data.soilSamples.find(s => s.trackingId === this.activeTicket.trackingId);
-            if (fresh) this.activeTicket = fresh;
-          }
-          this.cleanPartnerCategories();
-          try { localStorage.setItem(this.storageKey, JSON.stringify(this.data)); } catch(e) {}
-          this.render();
+        // Server has newer/different data: update local state safely
+        this.data = serverData;
+        if (this.activeTicket) {
+          const fresh = this.data.soilSamples && this.data.soilSamples.find(s => s.trackingId === this.activeTicket.trackingId);
+          if (fresh) this.activeTicket = fresh;
         }
+        this.cleanPartnerCategories();
+        try { localStorage.setItem(this.storageKey, JSON.stringify(this.data)); } catch(e) {}
+        this.render();
       } else {
         this.updateSyncBadge('offline');
       }
@@ -858,13 +889,14 @@ class ArkashineApp {
       this.authTab = 'login';
       this.authFeedback = null;
       this.render();
+      this.renderAuthUI(true);
     }
   }
 
   switchAuthTab(tab) {
     this.authTab = tab;
     this.authFeedback = null;
-    this.renderAuthUI();
+    this.renderAuthUI(true);
   }
 
   handleLoginSubmit(event) {
@@ -874,7 +906,7 @@ class ArkashineApp {
 
     if (!userField || !passField) {
       this.authFeedback = { type: "error", message: "Please enter your username/mobile and password." };
-      this.renderAuthUI();
+      this.renderAuthUI(false);
       return;
     }
 
@@ -895,12 +927,13 @@ class ArkashineApp {
       localStorage.setItem("ARKASHINE_AUTH_SESSION_V1", JSON.stringify(this.currentUser));
       this.authFeedback = null;
       this.render();
+      this.renderAuthUI(true);
     } else {
       this.authFeedback = { 
         type: "error", 
         message: "Invalid username or password. Click 'Create Account' below to sign up." 
       };
-      this.renderAuthUI();
+      this.renderAuthUI(false);
     }
   }
 
@@ -908,32 +941,36 @@ class ArkashineApp {
     if (event) event.preventDefault();
     const fullName = document.getElementById("auth-reg-name")?.value?.trim();
     const username = document.getElementById("auth-reg-username")?.value?.trim();
-    const phone = document.getElementById("auth-reg-phone")?.value?.trim();
+    let phone = document.getElementById("auth-reg-phone")?.value?.trim() || "";
+    phone = phone.replace(/\D/g, ''); // keep only numbers
+    if (phone.length === 12 && phone.startsWith('91')) phone = phone.slice(2);
+    if (phone.length === 11 && phone.startsWith('0')) phone = phone.slice(1);
+
     const role = document.getElementById("auth-reg-role")?.value;
     const password = document.getElementById("auth-reg-password")?.value;
     const confirmPass = document.getElementById("auth-reg-confirm")?.value;
 
     if (!fullName || !username || !phone || !password) {
       this.authFeedback = { type: "error", message: "Please fill in all required fields." };
-      this.renderAuthUI();
+      this.renderAuthUI(false);
       return;
     }
 
-    if (phone.length !== 10 || isNaN(phone)) {
+    if (phone.length !== 10) {
       this.authFeedback = { type: "error", message: "Please enter a valid 10-digit mobile number." };
-      this.renderAuthUI();
+      this.renderAuthUI(false);
       return;
     }
 
     if (password.length < 4) {
       this.authFeedback = { type: "error", message: "Password must be at least 4 characters long." };
-      this.renderAuthUI();
+      this.renderAuthUI(false);
       return;
     }
 
     if (password !== confirmPass) {
       this.authFeedback = { type: "error", message: "Passwords do not match. Please re-enter." };
-      this.renderAuthUI();
+      this.renderAuthUI(false);
       return;
     }
 
@@ -944,7 +981,7 @@ class ArkashineApp {
 
     if (existing) {
       this.authFeedback = { type: "error", message: "A user with this username or mobile already exists. Please log in." };
-      this.renderAuthUI();
+      this.renderAuthUI(false);
       return;
     }
 
@@ -967,10 +1004,10 @@ class ArkashineApp {
       message: `🎉 Account created for ${fullName}! Please sign in below.`
     };
     this.prefilledLoginUser = username;
-    this.renderAuthUI();
+    this.renderAuthUI(true);
   }
 
-  renderAuthUI() {
+  renderAuthUI(force = false) {
     // 1. Render User profile in Header
     const userBar = document.getElementById("auth-user-bar");
     if (userBar) {
@@ -998,7 +1035,7 @@ class ArkashineApp {
       } else {
         userBar.innerHTML = `
           <button 
-            onclick="app.authTab = 'login'; app.renderAuthUI();" 
+            onclick="app.authTab = 'login'; app.renderAuthUI(true);" 
             class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
           >
             <span>🔐</span> Login
@@ -1017,6 +1054,25 @@ class ArkashineApp {
     }
 
     const isLogin = this.authTab !== 'register';
+    const hasLoginForm = !!document.getElementById("auth-login-username");
+    const hasRegisterForm = !!document.getElementById("auth-reg-name");
+    const modalAlreadyRendered = isLogin ? hasLoginForm : hasRegisterForm;
+
+    // If modal for current tab is already in DOM and not forced, DO NOT re-render HTML (preserves focus and typing)
+    if (!force && modalAlreadyRendered) {
+      const banner = document.getElementById("auth-feedback-banner");
+      if (banner) {
+        if (this.authFeedback) {
+          banner.className = `p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${this.authFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`;
+          banner.innerHTML = `<span>${this.authFeedback.type === 'success' ? '✔' : '⚠️'}</span><span>${this.authFeedback.message}</span>`;
+          banner.style.display = 'flex';
+        } else {
+          banner.innerHTML = '';
+          banner.style.display = 'none';
+        }
+      }
+      return;
+    }
 
     authOverlay.innerHTML = `
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-150">
@@ -1052,12 +1108,9 @@ class ArkashineApp {
           <!-- Body -->
           <div class="p-6 space-y-4">
             
-            ${this.authFeedback ? `
-              <div class="p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${this.authFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}">
-                <span>${this.authFeedback.type === 'success' ? '✔' : '⚠️'}</span>
-                <span>${this.authFeedback.message}</span>
-              </div>
-            ` : ''}
+            <div id="auth-feedback-banner" class="p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${this.authFeedback ? (this.authFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200') : 'hidden'}" style="${this.authFeedback ? '' : 'display:none;'}">
+              ${this.authFeedback ? `<span>${this.authFeedback.type === 'success' ? '✔' : '⚠️'}</span><span>${this.authFeedback.message}</span>` : ''}
+            </div>
 
             ${isLogin ? `
               <!-- LOGIN FORM -->
