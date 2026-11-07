@@ -857,6 +857,138 @@
       "address": "Main Bazar / Town Area, Barabanki",
       "createdBy": "Shivam",
       "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S201",
+      "shopName": "Rishabh Dixit Retailers",
+      "shopkeeper": "Rishabh Dixit",
+      "phone": "7624974115",
+      "category": "Retail Soil Partner",
+      "village": "Sitapur",
+      "address": "Retailers Sitapur",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S202",
+      "shopName": "Deepu Paswan Retailer",
+      "shopkeeper": "Deepu Paswan",
+      "phone": "9793561379",
+      "category": "Retail Soil Partner",
+      "village": "Sultanpur",
+      "address": "Retailer Sultanpur",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S203",
+      "shopName": "Ashok Singh Retailers",
+      "shopkeeper": "Ashok Singh",
+      "phone": "9648528660",
+      "category": "Retail Soil Partner",
+      "village": "Banda, UP",
+      "address": "Retailers Banda, UP",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S204",
+      "shopName": "Raghavendra Singh Retailers",
+      "shopkeeper": "Raghavendra Singh",
+      "phone": "9260940021",
+      "category": "Retail Soil Partner",
+      "village": "Sultanpur",
+      "address": "Retailers Sultanpur",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S205",
+      "shopName": "Shivam Yadav Pesticides",
+      "shopkeeper": "Shivam Yadav",
+      "phone": "6387004711",
+      "category": "Retail Soil Partner",
+      "village": "Barabanki",
+      "address": "Barabanki Area",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S206",
+      "shopName": "Awdhesh Agrijuction",
+      "shopkeeper": "Awdhesh",
+      "phone": "8858111140",
+      "category": "Retail Soil Partner",
+      "village": "Kesharva, Barabanki",
+      "address": "Kesharva Barabanki",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S207",
+      "shopName": "Vipin Verma Patel Agro",
+      "shopkeeper": "Vipin Verma",
+      "phone": "9651337948",
+      "category": "Retail Soil Partner",
+      "village": "Gosaiganj, Sultanpur",
+      "address": "Gosaiganj Sultanpur",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S208",
+      "shopName": "Abhay Singh Retailers",
+      "shopkeeper": "Abhay Singh",
+      "phone": "9120670034",
+      "category": "Retail Soil Partner",
+      "village": "Sultanpur, UP",
+      "address": "Sultanpur UP",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S209",
+      "shopName": "Anirudh Verma Pesticides",
+      "shopkeeper": "Anirudh Verma",
+      "phone": "9935611706",
+      "category": "Retail Soil Partner",
+      "village": "Salempur, Barabanki",
+      "address": "Salempur Barabanki",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S210",
+      "shopName": "Lauvkush Yadav Pesticide",
+      "shopkeeper": "Lauvkush Yadav",
+      "phone": "9838786936",
+      "category": "Retail Soil Partner",
+      "village": "Dewa, Barabanki",
+      "address": "Dewa Barabanki",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S211",
+      "shopName": "Vinod Mishra Pesticides",
+      "shopkeeper": "Vinod Mishra",
+      "phone": "9936270688",
+      "category": "Retail Soil Partner",
+      "village": "Chandpur, Sitapur",
+      "address": "Chandpur Sitapur",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
+    },
+    {
+      "id": "SHP-S212",
+      "shopName": "Ranvijay Singh Retailers",
+      "shopkeeper": "Ranvijay Singh",
+      "phone": "9935869334",
+      "category": "Retail Soil Partner",
+      "village": "Palta Dewa, Barabanki",
+      "address": "Palta Dewa Barabanki",
+      "createdBy": "Shivam",
+      "samplesCollected": 0
     }
   ],
   "users": [
@@ -989,7 +1121,18 @@
     "Suratganj, Fatehpur, Barabanki",
     "Ramnagar, Mahadeva Circle, Barabanki",
     "Fatehpur, Kursi Circle, Barabanki",
-    "Barabanki Town, Barabanki"
+    "Barabanki Town, Barabanki",
+    "Sitapur",
+    "Sultanpur",
+    "Banda, UP",
+    "Barabanki",
+    "Kesharva, Barabanki",
+    "Gosaiganj, Sultanpur",
+    "Sultanpur, UP",
+    "Salempur, Barabanki",
+    "Dewa, Barabanki",
+    "Chandpur, Sitapur",
+    "Palta Dewa, Barabanki"
   ],
   "deletedIds": [],
   "soilSamples": [],
