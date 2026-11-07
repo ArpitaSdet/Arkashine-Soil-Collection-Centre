@@ -22,10 +22,337 @@ const PARTNER_CATEGORIES = [
 const INITIAL_DATA = {
   villages: [...PRESET_VILLAGES],
   shops: [
-    { id: "SHP-101", shopName: "Harohalli Village Soil Partner Centre", shopkeeper: "Manjunath Gowda", phone: "9845011223", category: "Village Soil Partner", village: "Harohalli", address: "Main Road, Harohalli Bus Stand", samplesCollected: 0 },
-    { id: "SHP-102", shopName: "Bidadi Retail Soil Partner", shopkeeper: "Suresh Reddy", phone: "9845022334", category: "Retail Soil Partner", village: "Bidadi", address: "Station Road, Bidadi Circle", samplesCollected: 0 },
-    { id: "SHP-103", shopName: "Ramanagara Central Soil Collection Hub", shopkeeper: "Kiran Kumar", phone: "9845033445", category: "All Registered Soil Collection Partners", village: "Ramanagara", address: "APMC Yard, Ramanagara", samplesCollected: 0 }
-  ],
+  {
+    "id": "SHP-01",
+    "shopName": "Chauhan beej Bhandar",
+    "shopkeeper": "Bablu chauhan",
+    "phone": "9793583968",
+    "category": "Retail Soil Partner",
+    "village": "Basari, Barabanki",
+    "address": "Basari, Chheda, Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-02",
+    "shopName": "Chauhan beej Bhandar",
+    "shopkeeper": "Ramlalhan chauhan",
+    "phone": "9956988300",
+    "category": "Retail Soil Partner",
+    "village": "Rampur Mathura, Sitapur",
+    "address": "Bhagwati pur, Rampur Mathura Sitapur",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-03",
+    "shopName": "Gurusahay beej Bhandar",
+    "shopkeeper": "C. B. Singh",
+    "phone": "7754804253",
+    "category": "Retail Soil Partner",
+    "village": "Lalapur, Sitapur",
+    "address": "Lalapur, Rampur Mathura, Sitapur",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-04",
+    "shopName": "Chauhan beej Bhandar",
+    "shopkeeper": "Anupam chahan",
+    "phone": "9129931100",
+    "category": "Retail Soil Partner",
+    "village": "Naharval, Sitapur",
+    "address": "Naharval, Rampur Mathura, Sitapur",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-05",
+    "shopName": "Maurya beej Bhandar",
+    "shopkeeper": "Ajay maurya",
+    "phone": "9793068860",
+    "category": "Retail Soil Partner",
+    "village": "Mohammad pur khala",
+    "address": "Mohammad pur khala, Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-06",
+    "shopName": "Kishan beej Bhandar",
+    "shopkeeper": "Rahmat Ali",
+    "phone": "9839788393",
+    "category": "Retail Soil Partner",
+    "village": "Belahara, Barabanki",
+    "address": "Belahara, Fatehpur, Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-07",
+    "shopName": "Patel krishi sewa Kendra",
+    "shopkeeper": "Pradeep verma",
+    "phone": "7607676794",
+    "category": "Retail Soil Partner",
+    "village": "Sauranha, Barabanki",
+    "address": "Sauranha, Belahara, Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-08",
+    "shopName": "Siri Bala ji beej Bhandar",
+    "shopkeeper": "Amit Kumar",
+    "phone": "9918731064",
+    "category": "Retail Soil Partner",
+    "village": "Bihura, Barabanki",
+    "address": "Bihura, Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-09",
+    "shopName": "Chaudhary khad bhandar",
+    "shopkeeper": "Ramprasad",
+    "phone": "8172914793",
+    "category": "Retail Soil Partner",
+    "village": "Kheriya, Barabanki",
+    "address": "Kheriya, Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-10",
+    "shopName": "Verma beej Bhandar",
+    "shopkeeper": "Sudhakar verma",
+    "phone": "9454278941",
+    "category": "Retail Soil Partner",
+    "village": "Mohammad pur khala",
+    "address": "Mohammad pur khala Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-11",
+    "shopName": "Kisan Seva Kendra",
+    "shopkeeper": "Umakant Verma",
+    "phone": "9455731367",
+    "category": "Retail Soil Partner",
+    "village": "Suratganj, Barabanki",
+    "address": "Suratganj Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-12",
+    "shopName": "Verma beej Bhandar",
+    "shopkeeper": "Atul Verma",
+    "phone": "9120664765",
+    "category": "Retail Soil Partner",
+    "village": "Imalipur, Barabanki",
+    "address": "Imalipur Suratganj Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-13",
+    "shopName": "Verma beej Bhandar",
+    "shopkeeper": "Surendra Verma",
+    "phone": "9415530494",
+    "category": "Retail Soil Partner",
+    "village": "Suratganj, Barabanki",
+    "address": "Suratganj Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-14",
+    "shopName": "Khan bij Bhandar",
+    "shopkeeper": "Rukhsar Ahmed",
+    "phone": "9651743318",
+    "category": "Retail Soil Partner",
+    "village": "Bishanpur Deva, Barabanki",
+    "address": "Bishanpur Deva Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-15",
+    "shopName": "Lodhi beej Bhandar",
+    "shopkeeper": "Mansingh Lodhi",
+    "phone": "9554431900",
+    "category": "Retail Soil Partner",
+    "village": "Bishanpur Deva, Barabanki",
+    "address": "Bishanpur Deva Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-16",
+    "shopName": "Rajput beej Bhandar",
+    "shopkeeper": "Neelu Rajput",
+    "phone": "9454915474",
+    "category": "Retail Soil Partner",
+    "village": "Fatehpur, Barabanki",
+    "address": "Fatehpur, Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-17",
+    "shopName": "Krishi Raksha ikai",
+    "shopkeeper": "Vijay Kumar",
+    "phone": "6307091791",
+    "category": "Retail Soil Partner",
+    "village": "Masauli, Barabanki",
+    "address": "Masauli Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-18",
+    "shopName": "Nitesh khad Bhandar",
+    "shopkeeper": "Nitesh Maurya",
+    "phone": "7800560090",
+    "category": "Retail Soil Partner",
+    "village": "Masauli, Barabanki",
+    "address": "Masauli Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-19",
+    "shopName": "Goswami pesticides",
+    "shopkeeper": "Goswami",
+    "phone": "9839535352",
+    "category": "Retail Soil Partner",
+    "village": "Gangavala, Barabanki",
+    "address": "Gangavala Tahsil Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-20",
+    "shopName": "National khad Bhandar",
+    "shopkeeper": "Mohammed Arif",
+    "phone": "9839455247",
+    "category": "Retail Soil Partner",
+    "village": "Fatehpur, Barabanki",
+    "address": "Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-21",
+    "shopName": "Kisan bij Bhandar",
+    "shopkeeper": "Dinesh Verma",
+    "phone": "8957643479",
+    "category": "Retail Soil Partner",
+    "village": "Mohammadpur khala",
+    "address": "Mohammadpur khala Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-22",
+    "shopName": "Vishnu khad Bhandar",
+    "shopkeeper": "Shivkant Gupta",
+    "phone": "9838177714",
+    "category": "Retail Soil Partner",
+    "village": "BEL Chauraha, Barabanki",
+    "address": "BEL Chauraha, Suratganj Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-23",
+    "shopName": "Balaji traders",
+    "shopkeeper": "Kuldeep Singh",
+    "phone": "9793654192",
+    "category": "Retail Soil Partner",
+    "village": "Belhara, Barabanki",
+    "address": "Belhara, Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-24",
+    "shopName": "Maurya beej Bhandar",
+    "shopkeeper": "Vishal Maurya",
+    "phone": "8737921680",
+    "category": "Retail Soil Partner",
+    "village": "Colonelganj, Gonda",
+    "address": "Colonelganj, Gonda",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-25",
+    "shopName": "Kisan bij Bhandar",
+    "shopkeeper": "Himanshu Maurya",
+    "phone": "8601234282",
+    "category": "Retail Soil Partner",
+    "village": "Colonelganj, Gonda",
+    "address": "Colonelganj, Gonda",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-26",
+    "shopName": "Kisan Seva Kendra",
+    "shopkeeper": "Mohammed Aslam",
+    "phone": "8922900098",
+    "category": "Retail Soil Partner",
+    "village": "Jarwal kasba, Bahraich",
+    "address": "Jarwal kasba Bahraich",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-27",
+    "shopName": "Jiya Khad Bhandar",
+    "shopkeeper": "Vasi Ahmad",
+    "phone": "8115940901",
+    "category": "Retail Soil Partner",
+    "village": "Jarwal kasba, Bahraich",
+    "address": "Jarwal kasba, Bahraich",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-28",
+    "shopName": "Verma traders",
+    "shopkeeper": "Aniruddh Kumar",
+    "phone": "8564960563",
+    "category": "Retail Soil Partner",
+    "village": "Mahadeva, Ramnagar",
+    "address": "Mahadeva Ramnagar",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-29",
+    "shopName": "Verma beej Bhandar",
+    "shopkeeper": "Amrendra Verma",
+    "phone": "7318180173",
+    "category": "Retail Soil Partner",
+    "village": "Jarwal road, Bahraich",
+    "address": "Jarwal road, Bahraich",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-30",
+    "shopName": "Maurya krishi Seva Kendra",
+    "shopkeeper": "Ankit Maurya",
+    "phone": "9838480151",
+    "category": "Retail Soil Partner",
+    "village": "Chhatauni Chauraha, Gonda",
+    "address": "Chhatauni Chauraha, Jarwal road Gonda",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-31",
+    "shopName": "Burma bij Bhandar",
+    "shopkeeper": "Amit Kumar",
+    "phone": "9454048950",
+    "category": "Retail Soil Partner",
+    "village": "Mohammadpur khala",
+    "address": "Mohammadpur khala, Fatehpur Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-32",
+    "shopName": "Kalika prasad Krishi sewa Kendra",
+    "shopkeeper": "Akash Maurya",
+    "phone": "8858753668",
+    "category": "Retail Soil Partner",
+    "village": "Jasmanda, Barabanki",
+    "address": "Jasmanda, Barabanki",
+    "samplesCollected": 0
+  },
+  {
+    "id": "SHP-33",
+    "shopName": "Kishan sahayata Kendra",
+    "shopkeeper": "Shrichand Maurya",
+    "phone": "9839823447",
+    "category": "Retail Soil Partner",
+    "village": "Shishepara, Barabanki",
+    "address": "Shishepara, Dewa, Barabanki",
+    "samplesCollected": 0
+  }
+],
   testingCentres: [
     { id: "TC-CENTRAL", name: "Arkashine Central Diagnostic Lab", type: "Arkashine Central Lab", machineSerial: "ARK-CENTRAL-LAB-01", operatorName: "Dr. Vignesh Shastry (Chief Analyst)", operatorPhone: "9880011223", location: "Bengaluru Central Diagnostic Hub", dateDeployed: "2026-01-10", status: "Active", totalTestsCount: 0 },
     { id: "TC-MACH-101", name: "Field Unit 1 - Ramanagara Machine Station", type: "Deployed Machine", machineSerial: "ARK-PORT-SCANNER-M04", operatorName: "Anand Murthy (Field Chemist)", operatorPhone: "9880022334", location: "APMC Complex, Ramanagara", dateDeployed: "2026-03-15", status: "Active", totalTestsCount: 0 },
@@ -68,7 +395,7 @@ class ArkashineApp {
       this.data.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
     }
     if (this.data.shops) {
-      this.data.shops = this.data.shops.filter(s => s.shopName !== "xyz");
+      this.data.shops = this.data.shops.filter(s => s.shopName !== "xyz" && !["SHP-101", "SHP-102", "SHP-103", "SHP-201", "SHP-202", "SHP-203"].includes(s.id));
     }
 
     // Fast 2-second background sync for true real-time multi-device collaboration
@@ -119,7 +446,10 @@ class ArkashineApp {
     if (!remote) return local;
     if (!local) return remote;
 
-    const deletedSet = new Set(this.data.deletedIds || []);
+    const deletedSet = new Set([
+      ...(this.data.deletedIds || []),
+      "SHP-101", "SHP-102", "SHP-103", "SHP-201", "SHP-202", "SHP-203"
+    ]);
 
     const merged = {
       villages: Array.from(new Set([...(local.villages || []), ...(remote.villages || [])])),
